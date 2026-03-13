@@ -1,0 +1,5 @@
+backend,,speedup_tip_vs_baseline,speedup_tip_vs_baseline,speedup_tip_vs_baseline,speedup_tip_vs_baseline,speedup_tip_vs_maxreg,speedup_tip_vs_maxreg,speedup_tip_vs_maxreg,speedup_tip_vs_maxreg
+,,mean,median,min,max,mean,median,min,max
+data_type,model,,,,,,,,
+AA,LG,1.66,1.67,1.6,1.69,1.65,1.66,1.59,1.67
+DNA,GTR,2.11,2.11,2.06,2.15,2.05,2.06,2.0,2.09
