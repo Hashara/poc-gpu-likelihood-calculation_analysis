@@ -1,0 +1,3 @@
+data_type,model,P1_walltime_median,P5_walltime_median,P5_opt_time_median,OMP48_walltime_median,OMP48_opt_time_median,speedup_P1_vs_P5,speedup_P1_vs_OMP48,ratio_P1_to_OMP48
+AA,LG,15.016,18.274,15.401,15.181,13.89,1.217,1.011,0.9891
+DNA,GTR,21.397,23.631,20.829,14.167,13.028,1.1044,0.6621,1.5103
