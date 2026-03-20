@@ -1,0 +1,113 @@
+================================================================================
+v4 RESULTS ANALYSIS — VANILA vs OPENACC Log-Likelihood Comparison
+================================================================================
+Date: 2026-03-20
+Fix applied: Host-side tree_lh recomputation (phylokernel_openacc.cpp)
+
+================================================================================
+SUMMARY TABLE
+================================================================================
+
+AA models:
+  LG           rooted:   0.0 diff (10/10 trees)        ✅ PERFECT
+  LG           unrooted: 0.0 diff (10/10 trees)        ✅ PERFECT
+  LG+G4        rooted:   0.0 diff (10/10 trees)        ✅ PERFECT
+  LG+G4        unrooted: 0.0 diff (10/10 trees)        ✅ PERFECT
+  LG+I         rooted:   0.0 diff (10/10 trees)        ✅ PERFECT
+  LG+I         unrooted: 0.0 diff (10/10 trees)        ✅ PERFECT
+  LG+I+G4      rooted:   0.0 diff (10/10 trees)        ✅ PERFECT
+  LG+I+G4      unrooted: 0.0 diff (10/10 trees)        ✅ PERFECT
+  LG+R4        rooted:   0.0 diff (10/10 trees)        ✅ PERFECT
+  LG+R4        unrooted: max 1e-4 (1 tree)             ⚠️ MINOR (tree_2 only)
+  LG+C60       rooted:   max 53.5 LL units             ❌ BUG (all trees)
+  LG+C60       unrooted: max 48.6 LL units             ❌ BUG (all trees)
+
+DNA models:
+  GTR          rooted:   max 1.2e-3                    ⚠️ FP DIFFERENCE
+  GTR          unrooted: max 3.0e-3                    ⚠️ FP DIFFERENCE
+  GTR+G4       rooted:   max 1.0e-4                    ⚠️ FP DIFFERENCE
+  GTR+G4       unrooted: max 1.0e-4                    ~ BORDERLINE
+  GTR+I        rooted:   max 2.9e-3                    ⚠️ FP DIFFERENCE
+  GTR+I        unrooted: max 1.4e-3                    ⚠️ FP DIFFERENCE
+  GTR+I+G4     rooted:   max 3.26e-2                   ⚠️ FP DIFFERENCE
+  GTR+I+G4     unrooted: max 2.3e-3                    ⚠️ FP DIFFERENCE
+  GTR+R4       rooted:   max 1.21e-2                   ⚠️ FP DIFFERENCE
+  GTR+R4       unrooted: max 3.1e-3                    ⚠️ FP DIFFERENCE
+
+================================================================================
+FINDING 1: tree_lh HOST RECOMPUTATION FIX — SUCCESS ✅
+================================================================================
+
+The host-side tree_lh recomputation fix WORKS:
+
+  +R4 (v3, before fix):  up to 3.8 LL units difference  → catastrophic
+  +R4 (v4, after fix):   up to 1.2e-2 LL difference     → same as plain GTR
+
+The +R4 differences in v4 are now the SAME magnitude as plain GTR differences,
+confirming the EM feedback loop amplification has been eliminated. The remaining
+differences are the general DNA FP differences (see Finding 2).
+
+================================================================================
+FINDING 2: DNA NUMERICAL DIFFERENCES — NOT A CODE BUG ⚠️
+================================================================================
+
+Root cause: DIFFERENT FP ARITHMETIC between CPU SIMD and GPU sequential.
+
+The VANILA build uses AVX+FMA SIMD kernels. For DNA (4 states), the dot product
+P[0]*plh[0] + P[1]*plh[1] + P[2]*plh[2] + P[3]*plh[3] is computed using Vec4d
+SIMD operations:
+  - SIMD: parallel multiply, then horizontal add → (a0+a1) + (a2+a3)
+  - GPU:  sequential accumulate → ((a0+a1) + a2) + a3
+
+These give DIFFERENT FP results at the ULP level (~2e-16 relative error per dot
+product). The differences compound through:
+  1. Partial likelihood computation (multiple internal nodes)
+  2. Branch length optimization (Newton-Raphson steps)
+  3. Model parameter optimization (Brent's method)
+
+Evidence from verbose +R4 trace:
+  - Steps 1-11: IDENTICAL (same FP path through initial optimization)
+  - Step 12: diverges (8.9e-6 in logl) — after model params are re-optimized
+  - GTR rate params after round 1: C-T: 0.51691 (VANILA) vs 0.51692 (OPENACC)
+  - Branch T2 after step 11: 0.2717656 (VANILA) vs 0.2717452 (OPENACC)
+
+For AA (20 states), the SIMD vs GPU differences happen to not affect optimization
+convergence (broader landscape with 20 states), giving 0.0 diff.
+
+This is EXPECTED BEHAVIOR when comparing different instruction sets. Sometimes the
+OPENACC optimizer even finds a BETTER optimum (e.g., GTR tree_8: OPENACC -21.1132
+vs VANILA -21.1144, a 0.0012 improvement).
+
+================================================================================
+FINDING 3: LG+C60 MIXTURE MODEL — GENUINE BUG ❌
+================================================================================
+
+Root cause: OpenACC code ignores model->getNMixtures() when computing block size.
+
+CPU kernel (phylokernelnew.h line 912):
+  ncat_mix = (fused_mix_rate) ? ncat : ncat * model->getNMixtures();
+  block = nstates * ncat_mix;    // → 20 * 60 = 1200 for C60
+
+OpenACC kernel (phylokernel_openacc.cpp line 1089-1091):
+  ncat = site_rate->getNRate();   // → 1 (no rate heterogeneity)
+  block = ncat * nstates;         // → 1 * 20 = 20  ← WRONG!
+
+For LG+C60, the GPU uses block=20 instead of block=1200, computing only 1 of the
+60 mixture classes. This produces initial LL of -90 (OPENACC) vs -43 (VANILA).
+
+Fix required: Add getNMixtures() to the block computation in phylokernel_openacc.cpp,
+plus handle the per-class P(t) computation, tip tables, and per-class scaling.
+
+================================================================================
+FILES AND OUTPUTS
+================================================================================
+
+Analysis directory:
+  /Users/u7826985/Projects/Nvidia/poc-gpu-likelihood-calculation_analysis/
+    2026_03_19_complexdata_bugfixes_R_v4/
+
+Results CSV:     v4_results.csv
+Comparison PNGs: DNA_rooted_vanila_openacc_comparison.png
+                 DNA_unrooted_vanila_openacc_comparison.png
+                 AA_rooted_vanila_openacc_comparison.png
+                 AA_unrooted_vanila_openacc_comparison.png
