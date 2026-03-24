@@ -1,0 +1,21 @@
+data_type,tree_type,model,n_trees,n_ll_exact (<0.01),n_ll_close (<1.0),max |LL diff|,mean LL diff,n_no_underflow,n_no_nan_rates,STATUS
+AA,rooted,LG,10,10,10,0.0,0.0,10,10,✅ PASS
+AA,rooted,LG+G4,10,10,10,0.0,0.0,10,10,✅ PASS
+AA,rooted,LG+I,10,10,10,0.0,0.0,10,10,✅ PASS
+AA,rooted,LG+I+G4,10,10,10,0.0,0.0,10,10,✅ PASS
+AA,rooted,LG+R4,10,10,10,0.0,0.0,10,10,✅ PASS
+AA,unrooted,LG,10,10,10,0.0,0.0,10,10,✅ PASS
+AA,unrooted,LG+G4,10,10,10,0.0,0.0,10,10,✅ PASS
+AA,unrooted,LG+I,10,10,10,0.0,0.0,10,10,✅ PASS
+AA,unrooted,LG+I+G4,10,10,10,0.0,0.0,10,10,✅ PASS
+AA,unrooted,LG+R4,10,10,10,0.0001,-1e-05,10,10,✅ PASS
+DNA,rooted,GTR,10,10,10,0.0012,7e-05,10,10,✅ PASS
+DNA,rooted,GTR+G4,10,10,10,0.0001,0.0,10,10,✅ PASS
+DNA,rooted,GTR+I,10,10,10,0.0028,-0.00035,10,10,✅ PASS
+DNA,rooted,GTR+I+G4,10,9,10,0.0405,0.00445,10,10,≈ CLOSE
+DNA,rooted,GTR+R4,10,9,10,0.0121,0.00118,10,10,≈ CLOSE
+DNA,unrooted,GTR,10,10,10,0.0039,0.00036,10,10,✅ PASS
+DNA,unrooted,GTR+G4,10,10,10,0.0001,1e-05,10,10,✅ PASS
+DNA,unrooted,GTR+I,10,10,10,0.0,0.0,10,10,✅ PASS
+DNA,unrooted,GTR+I+G4,10,10,10,0.0015,-0.0002,10,10,✅ PASS
+DNA,unrooted,GTR+R4,10,10,10,0.0031,-4e-05,10,10,✅ PASS
