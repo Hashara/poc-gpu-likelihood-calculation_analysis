@@ -58,6 +58,7 @@ See [plan_after_profiling.md](plan_after_profiling.md) for the full 7-step plan.
 |---|---|---|---|
 | 1 | Eigen dirty flag (Opt-A) | 5 lines | **Shipped** ✅ |
 | 2 | Persistent offset arrays (Opt-C) | 40 lines | **Shipped** ✅ |
+| 2b | M5: Persistent offsets (iqtree3-forked) | 30 lines | **Validated** ✅ |
 | 3 | Batch df/ddf downloads (Opt-B) | 30 lines | Planned |
 | 4 | Profile validation | — | Planned |
 | 5 | Register pressure reduction (Opt-D) | 50 lines | Planned |
@@ -204,6 +205,103 @@ DNA: -2.9s (8.5%). AA: -6.2s (4.9%). AA reaches 5.05x GPU/CPU speedup.
 
 ---
 
+## Step 2b: M5 — Persistent Offset Arrays (iqtree3-forked branch) ✅
+
+### Context
+
+Re-implementation of Step 2 (Opt-C) on the `openacc_kernels` branch of `iqtree3-forked`. Validates the same optimization with a simplified approach: fixed pre-allocation to `leafNum * 8` instead of the growable `ensureOffsetBuffer()` helper.
+
+### Implementation Differences vs Step 2
+
+| Aspect | Step 2 (Opt-C) | M5 (iqtree3-forked) |
+|---|---|---|
+| Buffer allocation | `ensureOffsetBuffer()` — growable with headroom | Fixed `new size_t[leafNum * 8]` at first-call setup |
+| Member naming | `gpu_offset_buf`, `gpu_offset_buf_size` | `gpu_offsets`, `gpu_offsets_size` |
+| Realloc strategy | Grows 2× when exceeded | No realloc — pre-sized to max possible batch |
+| Code delta | 64 lines (2 files) | ~30 lines (2 files) |
+| Core mechanism | Identical: `copyin → present` + `update device` | Identical |
+
+### Results
+
+| Metric | DNA OpenACC | DNA Vanilla | AA OpenACC | AA Vanilla |
+|---|---|---|---|---|
+| M5 wall-clock (ModelFinder) | 31.35s | 24.66s | 121.02s | 543.92s |
+| S2 wall-clock (for comparison) | 31.4s | 23.7s | 120.6s | 609.3s |
+
+| Metric | DNA | AA |
+|---|---|---|
+| GPU vs 1-core CPU | 1.27× slower | **4.49× faster** |
+| M5 vs S2 (GPU) | -0.05s (−0.2%) | +0.42s (+0.3%) |
+
+**M5 confirms S2 within noise.** Both approaches eliminate the same ~15K GPU malloc/free cycles.
+
+### Correctness
+
+All log-likelihoods match VANILLA exactly across all models tested:
+- **DNA:** 100 models (968 candidates), best model F81+F+G4, score **-56182.151** (both)
+- **AA:** 128 models (1232 candidates), best model LG+G4, score **-77823.964** (both)
+
+Only R5/I+R5 models show ≤0.002 unit diffs — numerical noise from iterative optimization convergence, not correctness issues. All simple models match to all reported decimal places.
+
+### Note on Vanilla Baselines
+
+AA Vanilla times differ between runs (609.3s S2 vs 543.9s M5) due to different CPU nodes:
+- S2: unknown node assignment
+- M5: gadi-cpu-clx-0133
+
+The GPU times are stable across runs (120.6s vs 121.0s), confirming the GPU is not affected by node variability.
+
+---
+
+## Step 3: M6 — T2 Template-Based Optimizations (iqtree3-forked) ⚠️ AA REGRESSION
+
+### Changes
+
+Four optimizations applied together as "M6":
+
+1. **Step 1 — DNA derivative kernel VL=128→32:** Reduce `vector_length` from 128 to 32 in `derivKernelTipInt<4>` and `derivKernelIntInt<4>`. Increases block count from 8 to 32 on 80 SMs. Each thread still processes one independent pattern — 100% lane utilization maintained.
+
+2. **Step 2 — Template `computeTransDerivOnGPU<NSTATES>`:** Added `template<int NSTATES>` with `if constexpr` for compile-time div/mod optimization (DNA: shift/mask) and inner loop unrolling. Dispatched via `OPENACC_DISPATCH_NSTATES` macro.
+
+3. **Step 3 — Persistent `partial_lh_node` buffer:** `reductionKernelTipInt`'s per-call `new[]/copyin()/delete[]` replaced with persistent `enter data create` + `update device` + `present()`.
+
+4. **Step 4 — Persistent `trans_mat` buffer (likelihood path):** `reductionKernelIntInt`'s per-call `new[]/copyin()/delete[]` replaced with same persistent pattern.
+
+### Results
+
+| Metric | DNA OpenACC | DNA Vanilla | AA OpenACC | AA Vanilla |
+|---|---|---|---|---|
+| M6 wall-clock (ModelFinder) | 31.11s | 23.99s | 141.03s | 538.09s |
+| M5 baseline (for comparison) | 31.35s | 24.66s | 121.02s | 543.92s |
+
+| Metric | DNA | AA |
+|---|---|---|
+| **M6 vs M5 (GPU)** | **-0.24s (−0.8%)** | **+20.0s (+16.5%) ⚠️ REGRESSION** |
+| GPU vs 1-core CPU | 1.30× slower | **3.81× faster** |
+
+### Analysis
+
+**DNA: Neutral (−0.8%).** The VL=128→32 change (Step 1) was expected to give 8-14% speedup from 4× more blocks. The result is flat. Possible explanations:
+- The derivative kernels may be compute-bound (not occupancy-limited) on this dataset — more blocks don't help if each block already saturates the FP64 pipeline
+- The nvc++ compiler may have generated different register allocation at VL=32, changing the instruction mix
+- The profiling showed 0.5-0.8% SM utilization for derivative kernels, but this measures grid-level occupancy, not throughput per SM
+
+**AA: 16.5% regression.** This is a real regression — M6 AA (141.0s) is worse than even the MS6+MS9 baseline (133.2s). The vanilla baseline is stable (538s vs 544s), ruling out server variance.
+
+Most likely culprit: **Steps 3 or 4 (persistent buffers for reduction kernels)**. The `present()` lookup for persistent buffers may have different overhead characteristics than scoped `copyin()` in the nvc++ OpenACC runtime, especially when called ~1232× (one per AA model). The `copyin()` on a fresh pointer avoids the device-mapping table lookup that `present()` requires.
+
+### Correctness
+
+All log-likelihoods match VANILLA exactly:
+- **DNA:** Best model F81+F+G4, score **-56182.1512** (both)
+- **AA:** Best model LG+G4, score **-77823.9643** (both)
+
+### Verdict: REVERT M6 changes on iqtree3-forked
+
+The DNA improvement is negligible and the AA regression is significant. All four T2 changes should be reverted. The VL tuning hypothesis (Step 1) was disproved — derivative kernel performance is not occupancy-limited on this workload.
+
+---
+
 ## Cumulative Results Summary
 
 | Stage | DNA OpenACC | AA OpenACC | AA GPU/CPU |
@@ -212,9 +310,13 @@ DNA: -2.9s (8.5%). AA: -6.2s (4.9%). AA reaches 5.05x GPU/CPU speedup.
 | + MS6 (selective upload) | 34.7s | 123.3s | 4.5× |
 | + MS9 (skip pattern_lh_cat) | 34.7s | 123.3s | 4.5× |
 | + S1 Eigen dirty flag | 34.3s | 126.7s | 4.2× |
-| + S2 Persistent offsets | **31.4s** | **120.6s** | **5.1×** |
+| + S2 Persistent offsets | 31.4s | 120.6s | 5.1× |
+| + M5 Persistent offsets (forked) | **31.4s** | **121.0s** | **4.5×** |
+| + M6 T2 Templates (forked) | 31.1s | 141.0s ⚠️ | 3.8× ⚠️ |
 
-**Total improvement: DNA -25.4%, AA -47.5%**
+**Best achieved: DNA 31.1s, AA 121.0s (M5)**
+
+*Note: M6 AA regressed — recommended to stay at M5 baseline. M5 AA GPU/CPU ratio (4.5×) uses a different (faster) vanilla baseline node than S2 (5.1×). GPU times are stable: 120.6s vs 121.0s.*
 
 ---
 
@@ -228,14 +330,22 @@ results/2026_03_27_modelselection_opt_after_prof/
 │   ├── *s1_eigenflag*OPENACC*                 # + Opt-A (34.3s)
 │   ├── *s1_eigenflag*VANILA*                  # Vanilla (24.0s)
 │   ├── *s2_persistance_offsetarray*OPENACC*   # + Opt-A+C (31.4s)
-│   └── *s2_persistance_offsetarray*VANILA*    # Vanilla (23.7s)
+│   ├── *s2_persistance_offsetarray*VANILA*    # Vanilla (23.7s)
+│   ├── *m5_persistant_array*OPENACC*          # M5 forked branch (31.4s)
+│   ├── *m5_persistant_array*VANILA*           # Vanilla (24.7s)
+│   ├── *m6_templates*OPENACC*                 # M6 T2 templates (31.1s) ⚠️
+│   └── *m6_templates*VANILA*                  # Vanilla (24.0s)
 └── AA/
     ├── *before_prof_opt*OPENACC*              # MS6+MS9 baseline (133.2s)
     ├── *before_prof_opt*VANILA*               # Vanilla baseline (554.6s)
     ├── *s1_eigenflag*OPENACC*                 # + Opt-A (126.7s)
     ├── *s1_eigenflag*VANILA*                  # Vanilla (535.6s)
     ├── *s2_persistance_offsetarray*OPENACC*   # + Opt-A+C (120.6s)
-    └── *s2_persistance_offsetarray*VANILA*    # Vanilla (609.3s)
+    ├── *s2_persistance_offsetarray*VANILA*    # Vanilla (609.3s)
+    ├── *m5_persistant_array*OPENACC*          # M5 forked branch (121.0s)
+    ├── *m5_persistant_array*VANILA*           # Vanilla (543.9s)
+    ├── *m6_templates*OPENACC*                 # M6 T2 templates (141.0s) ⚠️ REGRESSION
+    └── *m6_templates*VANILA*                  # Vanilla (538.1s)
 ```
 
 ## Profiling Data Location
