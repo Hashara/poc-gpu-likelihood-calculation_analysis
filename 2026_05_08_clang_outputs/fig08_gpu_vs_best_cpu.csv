@@ -1,5 +1,5 @@
 Data Type,GPU,Length,GPU TreeSearch (sec),Clang 48T TreeSearch (sec),GPU Speedup vs Clang 48T
-AA,A100,100K,,2471.3,
+AA,A100,100K,1644.4,2471.3,1.5
 AA,H200,100K,991.1,2471.3,2.49
 AA,V100,100K,2065.6,2471.3,1.2
 AA,A100,10K,530.7,269.7,0.51
