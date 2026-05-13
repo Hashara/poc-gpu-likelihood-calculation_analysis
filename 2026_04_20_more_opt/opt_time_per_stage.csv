@@ -1,0 +1,6 @@
+test_case,baseline,aferprof1,aferprof2,aferprof3,aferprof4,aferprof5,aferprof6,aferprof7
+AA NONREV | AA_kernel-nonrev_100taxa_10000len,1.375,1.366,1.366,1.416,1.384,1.361,1.379,1.413
+AA REV | AA_100taxa_10000len,1.436,1.423,1.286,1.234,1.248,1.065,1.068,1.046
+AA REV | AA_LG-I-G4_100taxa_10000len,18.754,18.957,15.809,15.764,16.203,12.245,12.136,12.386
+DNA NONREV | DNA_kernel-nonrev_100taxa_10000len,0.133,0.137,0.131,0.136,0.136,0.134,0.136,0.135
+DNA REV | DNA_100taxa_10000len,0.271,0.279,0.283,0.282,0.272,0.286,0.281,0.285
