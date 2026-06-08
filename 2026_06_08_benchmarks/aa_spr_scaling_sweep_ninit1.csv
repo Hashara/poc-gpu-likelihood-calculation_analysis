@@ -1,0 +1,8 @@
+length,wall_s,wall_current_s,wall_cum_s,resumed,energy_scale,tree_wall_s,mf_wall_s,cpu_J,energy_Wh,best_logL,complete,file
+100000,903.729,903.729,,False,1.0,527.304,373.032,628246.889,174.5130247222222,-7541976.86,True,output_benchmark_ninit_1_AA_LG+I+G4_OMP_104_taxa100_run1_tree_1_100000_iqtree3_AA_INTEL_VANILA_OMP104_LG-I-G4_100taxa_100000len_ninit1_aa.log
+1000000,18247.148,18247.148,,False,1.0,11711.482,6475.761,12643290.92,3512.0252555555558,-78605196.573,True,output_benchmark_ninit_1_AA_LG+I+G4_OMP_104_taxa100_run1_tree_1_1000000_iqtree3_AA_INTEL_VANILA_OMP104_LG-I-G4_100taxa_1000000len_ninit1_aa.log
+2500000,45083.029,45083.029,,False,1.0,28383.813,16553.701,30898963.817,8583.045504722222,-211498286.378,True,output_benchmark_ninit_1_AA_LG+I+G4_OMP_104_taxa100_run1_tree_1_2500000_iqtree3_AA_INTEL_VANILA_OMP104_LG-I-G4_100taxa_2500000len_ninit1_aa.log
+3125000,58605.632,58605.632,,False,1.0,34598.512,23826.749,40022254.226,11117.292840555556,-264387360.7,True,output_benchmark_ninit_1_AA_LG+I+G4_OMP_104_taxa100_run1_tree_1_3125000_iqtree3_AA_INTEL_VANILA_OMP104_LG-I-G4_100taxa_3125000len_ninit1_aa.log
+3750000,,,,False,1.0,,,,0.0,,False,output_benchmark_ninit_1_AA_LG+I+G4_OMP_104_taxa100_run1_tree_1_3750000_iqtree3_AA_INTEL_VANILA_OMP104_LG-I-G4_100taxa_3750000len_ninit1_aa.log
+5000000,,,,False,1.0,,,,0.0,,False,output_benchmark_ninit_1_AA_LG+I+G4_OMP_104_taxa100_run1_tree_1_5000000_iqtree3_AA_INTEL_VANILA_OMP104_LG-I-G4_100taxa_5000000len_ninit1_aa.log
+10000000,219981.499,46983.842,219981.499,True,4.682067060416218,46692.936,95887.924,151957833.28921896,42210.50924700527,-782587990.703,True,output_benchmark_ninit_1_AA_LG+I+G4_OMP_104_taxa100_run1_tree_1_10000000_iqtree3_AA_INTEL_VANILA_OMP104_LG-I-G4_100taxa_10000000len_ninit1_aa.log
