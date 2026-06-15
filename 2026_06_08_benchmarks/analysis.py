@@ -630,6 +630,30 @@ for ninit_val in (1, 2):
                         ninit_label=ninit_val, cells=CELLS_5, stacked=True)
 
 # ---------------------------------------------------------------------------
+# 11b. Per-datatype 3-panel linear variants
+#      Same render functions as §10/§11, but each (datatype, ninit) gets its own
+#      3-panel figure (100K, 1M, 10M). Useful for slides that focus on either AA
+#      or DNA alone.
+# ---------------------------------------------------------------------------
+
+CELLS_AA  = [c for c in CELLS_6 if c[0] == 'AA']
+CELLS_DNA = [c for c in CELLS_6 if c[0] == 'DNA']
+
+for ninit_val in (1, 2):
+    df_n = raw[raw['ninit'] == ninit_val].copy()
+    for dt_tag, cells_dt in [('aa', CELLS_AA), ('dna', CELLS_DNA)]:
+        # Phase walls — total / tree-search / ModelFinder
+        for col_, title_, slug in PHASE_METRICS:
+            render_phase_panel(df_n, col_, title_,
+                               f'fig_{dt_tag}_{slug}_linear_3panel_ninit{ninit_val}.png',
+                               ninit_label=ninit_val, cells=cells_dt)
+        # Energy — total + stacked
+        render_energy_panel(df_n, f'fig_{dt_tag}_energy_total_linear_3panel_ninit{ninit_val}.png',
+                            ninit_label=ninit_val, cells=cells_dt, stacked=False)
+        render_energy_panel(df_n, f'fig_{dt_tag}_energy_stacked_linear_3panel_ninit{ninit_val}.png',
+                            ninit_label=ninit_val, cells=cells_dt, stacked=True)
+
+# ---------------------------------------------------------------------------
 # 12. AA SPR scaling sweep — wall and energy vs alignment length
 # ---------------------------------------------------------------------------
 
