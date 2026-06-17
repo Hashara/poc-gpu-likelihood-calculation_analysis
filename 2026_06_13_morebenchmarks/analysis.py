@@ -45,6 +45,19 @@ RE_E_BLOCK_GPU_NA = re.compile(r"^\s*GPU:\s+not available", re.M)
 RE_GPU_NAME       = re.compile(r"\[([^=]+)=[\d.]+\s+J\]")
 RE_GPU_MEM        = re.compile(r"GPU mem:\s+([\d.]+)\s*/\s*([\d.]+)\s+MB.*?\+([\d.]+)\s+MB")
 RE_CPU_MEM        = re.compile(r"CPU mem:\s+([\d.]+)\s*/\s*([\d.]+)\s+MB")
+# Host RAM declared in the very first lines (works even for killed runs)
+RE_HOST_RAM       = re.compile(r"Host:.*?\(.*?(\d+)\s+GB\s+RAM\)")
+# GPU advertised VRAM ("NVIDIA H200, 143426 MB")
+RE_GPU_CAP_HEAD   = re.compile(r"GPU:\s+Device 0 \(OpenACC[^)]*?,\s*(\d+)\s*MB\)")
+# IQ-TREE's pre-run memory estimate
+RE_MF_REQ_RAM     = re.compile(r"NOTE:\s+ModelFinder requires\s+(\d+)\s+MB RAM", re.I)
+# memory-saving flag from the Command: line
+RE_MEM_FLAG       = re.compile(r"^Command:.*?\s(-mem|--mem|-lmsave)\s+(\S+)", re.M)
+# auto-enabled LM_MEM_SAVE notices written by IQ-TREE at runtime
+RE_LM_GPU = re.compile(
+    r"Switching to GPU memory-saving mode \(LM_MEM_SAVE\) using ([\d.]+) GB \(([\d.]+)% of free VRAM\)", re.I)
+RE_LM_CPU = re.compile(
+    r"Switching to memory saving mode using ([\d.]+) GB \(([\d.]+)% of normal mode\)", re.I)
 
 def _f(rx, txt, grp=1, default=None):
     m = rx.search(txt)
@@ -125,8 +138,26 @@ def parse_log(path: Path) -> dict:
         "e_mf_gpu_J":       float(e_mf.group(2)) if e_mf and e_mf.group(2) else None,
         "gpu_name":         gpu_name_m.group(1).strip() if gpu_name_m else None,
         "gpu_mem_peak_MB":  float(gpu_mem.group(1)) if gpu_mem else None,
+        "gpu_mem_cap_MB":   float(gpu_mem.group(2)) if gpu_mem
+                            else (float(RE_GPU_CAP_HEAD.search(txt).group(1))
+                                  if RE_GPU_CAP_HEAD.search(txt) else None),
         "gpu_mem_delta_MB": float(gpu_mem.group(3)) if gpu_mem else None,
         "cpu_mem_peak_MB":  float(cpu_mem.group(1)) if cpu_mem else None,
+        "cpu_mem_cap_MB":   float(cpu_mem.group(2)) if cpu_mem
+                            else (float(RE_HOST_RAM.search(txt).group(1)) * 1024
+                                  if RE_HOST_RAM.search(txt) else None),
+        "mf_required_MB":   _f(RE_MF_REQ_RAM, txt),
+        "mem_flag":         (lambda m: f"{m.group(1)} {m.group(2)}" if m else None)(
+                                RE_MEM_FLAG.search(txt)),
+        # auto-LM_MEM_SAVE (last occurrence in case multiple, e.g. resumed runs)
+        "lm_save_gpu_GB":   (lambda hits: float(hits[-1][0]) if hits else None)(
+                                RE_LM_GPU.findall(txt)),
+        "lm_save_gpu_pct":  (lambda hits: float(hits[-1][1]) if hits else None)(
+                                RE_LM_GPU.findall(txt)),
+        "lm_save_cpu_GB":   (lambda hits: float(hits[-1][0]) if hits else None)(
+                                RE_LM_CPU.findall(txt)),
+        "lm_save_cpu_pct":  (lambda hits: float(hits[-1][1]) if hits else None)(
+                                RE_LM_CPU.findall(txt)),
     }
 
 def collect() -> pd.DataFrame:
@@ -343,26 +374,30 @@ def stacked_energy_panels(df, test_name, cpu_col, gpu_col, fname,
     GPU_GREEN = "#7fc97f"
     for ax, (dt, s) in zip(axes, cells):
         slice_ = sub[(sub.datatype == dt) & (sub.sites == s)]
-        cpu_J, gpu_J = [], []
+        cpu_J, gpu_J, lm_flags = [], [], []
         for hw in LINEAR_HW_ORDER:
             row = slice_[slice_.hardware == hw]
             if len(row):
                 cpu_J.append(row[cpu_col].iloc[0] if pd.notna(row[cpu_col].iloc[0]) else np.nan)
                 gpu_J.append(row[gpu_col].iloc[0] if pd.notna(row[gpu_col].iloc[0]) else 0.0)
+                rr = row.iloc[0]
+                lm_flags.append((hw.startswith("GPU") and pd.notna(rr.get("lm_save_gpu_GB")))
+                                or (hw.startswith("CPU") and pd.notna(rr.get("lm_save_cpu_GB"))))
             else:
-                cpu_J.append(np.nan); gpu_J.append(np.nan)
+                cpu_J.append(np.nan); gpu_J.append(np.nan); lm_flags.append(False)
         cpu_wh = [c/3600 if pd.notna(c) else np.nan for c in cpu_J]
         gpu_wh = [g/3600 if pd.notna(g) else np.nan for g in gpu_J]
+        hatches = ["////" if lm else None for lm in lm_flags]
         cpu_bars = ax.bar(x, cpu_wh, color=CPU_BLUE, edgecolor="black", linewidth=0.4, width=0.7,
-                          label="CPU (host)")
+                          hatch=hatches, label="CPU (host)")
         gpu_bars = ax.bar(x, gpu_wh, bottom=cpu_wh, color=GPU_GREEN, edgecolor="black", linewidth=0.4,
-                          width=0.7, label="GPU (accelerator)")
-        # value label at top of stack = total Wh
-        for i, (c, g) in enumerate(zip(cpu_J, gpu_J)):
+                          width=0.7, hatch=hatches, label="GPU (accelerator)")
+        for i, (c, g, lm) in enumerate(zip(cpu_J, gpu_J, lm_flags)):
             if pd.notna(c):
                 total = (c if pd.notna(c) else 0) + (g if pd.notna(g) else 0)
                 top = total/3600
-                ax.text(x[i], top, _fmt_wh(total), ha="center", va="bottom",
+                label = _fmt_wh(total) + (" ★" if lm else "")
+                ax.text(x[i], top, label, ha="center", va="bottom",
                         fontsize=8, rotation=90)
         title_sites = f"{s//1000}K" if s < 1_000_000 else f"{s//1_000_000}M"
         ax.set_title(f"{dt} — {title_sites}", fontsize=11)
@@ -385,12 +420,156 @@ def stacked_energy_panels(df, test_name, cpu_col, gpu_col, fname,
                 "CLX = Cascade Lake Xeon 8274 (NCI `normal`, 48c).  "
                 "SPR = Sapphire Rapids 8480+ (NCI `normalsr`, 104c, -nt 103).  "
                 "GPU rows use the OpenACC build, host `-nt 1`.  "
+                "Hatched (////) + ★ = LM_MEM_SAVE auto-engaged → ~1.5–3× slower per likelihood eval.  "
                 "Missing bar = run didn't complete (no `Energy:` block) or wasn't submitted.")
     fig.text(0.5, -0.05, footnote, ha="center", fontsize=7, style="italic")
     fig.tight_layout(rect=[0, 0.02, 1, 0.96])
     fig.savefig(OUT_DIR / fname, dpi=160, bbox_inches="tight")
     plt.close(fig)
     print(f"[stacked_energy] wrote {fname} ({ncols} panels, {cpu_col} + {gpu_col})")
+
+# Memory capacities (GB) by backend — host RAM for CPU rows, VRAM for GPU rows
+MEM_CAPACITY_GB = {
+    "CPU_CLX_OMP48":  188,
+    "CPU_SPR_OMP104": 503,
+    "GPU_V100":        32,
+    "GPU_H200":       140,
+}
+MEM_BAR_ORDER = ["CPU_CLX_OMP48", "CPU_SPR_OMP104", "GPU_V100", "GPU_H200"]
+MEM_BAR_LABEL = {"CPU_CLX_OMP48": "CLX", "CPU_SPR_OMP104": "SPR",
+                 "GPU_V100": "V100", "GPU_H200": "H200"}
+COLOR_CLEAN   = "#2ca02c"  # green
+COLOR_MOD     = "#f5c518"  # yellow
+COLOR_TIGHT   = "#f37020"  # orange
+COLOR_FAIL    = "#c1272d"  # red
+COLOR_EMPTY   = "#e6e6e6"  # light grey (background)
+
+def _mem_classify(frac):
+    if frac is None or not np.isfinite(frac):
+        return None
+    if frac < 0.50: return ("clean",    COLOR_CLEAN, "✓")
+    if frac < 0.90: return ("moderate", COLOR_MOD,   "✓")
+    return            ("tight",    COLOR_TIGHT, "△")
+
+def memory_grid(df, test_name, fname):
+    """2×3 grid: AA on top row, DNA on bottom row; columns are 100K / 1M / 10M sites.
+    Each panel has one horizontal bar per backend showing capacity vs peak-used."""
+    sub = df[df.test == test_name].copy()
+    sites_present = sorted(sub["sites"].dropna().unique())
+    # filter to {100K, 1M, 10M} columns that have any data in this test
+    cols = [s for s in (100_000, 1_000_000, 10_000_000) if s in sites_present]
+    if not cols:
+        print(f"[memory_grid] no data for test={test_name}, skipping")
+        return
+    dts = [dt for dt in ("AA", "DNA") if not sub[sub.datatype == dt].empty]
+    nrows, ncols = len(dts), len(cols)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(5.5 * ncols, 3.0 * nrows),
+                             squeeze=False)
+    fig.suptitle(f"Memory headroom — {test_name}\n"
+                 "each bar = one backend; full bar = capacity (host RAM for CPU, VRAM for GPU); "
+                 "fill = peak used",
+                 fontsize=11)
+    bar_h = 0.65
+    for r, dt in enumerate(dts):
+        for c, s in enumerate(cols):
+            ax = axes[r][c]
+            slice_ = sub[(sub.datatype == dt) & (sub.sites == s)]
+            for i, hw in enumerate(MEM_BAR_ORDER):
+                y = len(MEM_BAR_ORDER) - 1 - i  # CLX at top
+                row = slice_[slice_.hardware == hw]
+                # default capacity if log missing
+                cap_gb = MEM_CAPACITY_GB[hw]
+                if len(row):
+                    rr = row.iloc[0]
+                    cap_col = "cpu_mem_cap_MB" if hw.startswith("CPU") else "gpu_mem_cap_MB"
+                    cap_mb = rr.get(cap_col)
+                    if pd.notna(cap_mb) and cap_mb:
+                        cap_gb = cap_mb / 1024.0
+                ax.barh(y, cap_gb, height=bar_h, color=COLOR_EMPTY,
+                        edgecolor="black", linewidth=0.5)
+                if not len(row):
+                    ax.text(cap_gb*1.02, y, " not submitted", va="center", ha="left",
+                            fontsize=8, color="#888", style="italic")
+                    continue
+                if hw.startswith("CPU"):
+                    used_mb = rr.get("cpu_mem_peak_MB")
+                else:
+                    used_mb = rr.get("gpu_mem_peak_MB")
+                if pd.isna(used_mb) or used_mb is None:
+                    if rr["complete"]:
+                        msg = "no peak recorded"
+                    elif test_name == "LGC10":
+                        msg = "killed in tree-search"   # LGC10 has no ModelFinder phase
+                    elif pd.isna(rr["wall_mf_explicit_s"]):
+                        msg = "killed in ModelFinder"
+                    else:
+                        msg = "killed in tree-search"
+                    ax.text(cap_gb*1.02, y, f" {msg}", va="center", ha="left",
+                            fontsize=8, color="#888", style="italic")
+                    continue
+                used_gb = used_mb / 1024.0
+                frac    = used_gb / cap_gb
+                cls = _mem_classify(frac)
+                # If LM_MEM_SAVE auto-engaged, force the bar to the "tight" orange
+                # so it's visually distinct from non-LM_SAVE bars of the same fill %.
+                lm_on = (hw.startswith("GPU") and pd.notna(rr.get("lm_save_gpu_GB"))) or \
+                        (hw.startswith("CPU") and pd.notna(rr.get("lm_save_cpu_GB")))
+                color = COLOR_TIGHT if lm_on else cls[1]
+                # fill rectangle
+                ax.barh(y, min(used_gb, cap_gb), height=bar_h, color=color,
+                        edgecolor="black", linewidth=0.5)
+                # marker on fill
+                ax.text(min(used_gb, cap_gb) - cap_gb*0.012, y, cls[2],
+                        va="center", ha="right", fontsize=11, color="white",
+                        fontweight="bold")
+                lm_tag = ""
+                if hw.startswith("GPU") and pd.notna(rr.get("lm_save_gpu_GB")):
+                    lm_tag = f"  · LM_SAVE ({rr['lm_save_gpu_pct']:.0f}% VRAM)"
+                elif hw.startswith("CPU") and pd.notna(rr.get("lm_save_cpu_GB")):
+                    lm_tag = f"  · LM_SAVE ({rr['lm_save_cpu_pct']:.0f}% normal)"
+                ax.text(cap_gb*1.02, y,
+                        f" {used_gb:.0f}/{cap_gb:.0f} GB  ({frac*100:.0f}%){lm_tag}",
+                        va="center", ha="left", fontsize=8)
+            ax.set_yticks(range(len(MEM_BAR_ORDER)))
+            ax.set_yticklabels([MEM_BAR_LABEL[h] for h in reversed(MEM_BAR_ORDER)],
+                               fontsize=9, fontweight="bold")
+            # x-axis scaled to the largest capacity actually plotted in this panel
+            caps_here = []
+            for hw in MEM_BAR_ORDER:
+                rr = slice_[slice_.hardware == hw]
+                cap_col = "cpu_mem_cap_MB" if hw.startswith("CPU") else "gpu_mem_cap_MB"
+                if len(rr) and pd.notna(rr[cap_col].iloc[0]):
+                    caps_here.append(rr[cap_col].iloc[0] / 1024.0)
+                else:
+                    caps_here.append(MEM_CAPACITY_GB[hw])
+            ax.set_xlim(0, max(caps_here) * 1.45)
+            ax.set_xlabel("memory (GB)")
+            ax.set_title(f"{dt} · {s//1000}K sites" if s < 1_000_000
+                         else f"{dt} · {s//1_000_000}M sites",
+                         fontsize=11, fontweight="bold")
+            ax.grid(axis="x", alpha=0.25, linestyle="--")
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
+
+    legend_items = [
+        (COLOR_CLEAN, "✓ clean (<50%)"),
+        (COLOR_MOD,   "moderate (50–90%)"),
+        (COLOR_TIGHT, "△ tight (≥90%)"),
+        (COLOR_EMPTY, "not submitted / no peak recorded"),
+    ]
+    handles = [plt.Rectangle((0, 0), 1, 1, color=c, ec="black", lw=0.4) for c, _ in legend_items]
+    fig.legend(handles, [l for _, l in legend_items],
+               loc="lower center", ncol=len(legend_items), frameon=True, fontsize=9,
+               bbox_to_anchor=(0.5, -0.02))
+    foot = ("capacities — CLX 188 GB · SPR 503 GB · V100 32 GB VRAM · H200 140 GB VRAM. "
+            "CPU rows: peak resident host RAM from IQ-TREE `Energy:` block. "
+            "GPU rows: peak VRAM. Empty bars = run was either not submitted or killed before "
+            "the `Energy:` block was written.")
+    fig.text(0.5, -0.06, foot, ha="center", fontsize=7, style="italic")
+    fig.tight_layout(rect=[0, 0.03, 1, 0.94])
+    fig.savefig(OUT_DIR / fname, dpi=160, bbox_inches="tight")
+    plt.close(fig)
+    print(f"[memory_grid] wrote {fname} ({nrows}×{ncols} panels)")
 
 def total_energy_byStage_panels(df, test_name, fname, ninit=2):
     """Per (datatype, sites) panel: each HW bar = total energy stacked by stage
@@ -423,7 +602,7 @@ def total_energy_byStage_panels(df, test_name, fname, ninit=2):
     x = np.arange(len(LINEAR_HW_ORDER))
     for ax, (dt, s) in zip(axes, cells):
         slice_ = sub[(sub.datatype == dt) & (sub.sites == s)]
-        mf, ts, rs, tot = [], [], [], []
+        mf, ts, rs, tot, lm_flags = [], [], [], [], []
         for hw in LINEAR_HW_ORDER:
             row = slice_[slice_.hardware == hw]
             if len(row):
@@ -431,29 +610,32 @@ def total_energy_byStage_panels(df, test_name, fname, ninit=2):
                 ts_J = row["e_ts_total_J"].iloc[0]
                 rs_J = row["e_residual_J"].iloc[0]
                 tot_J = row["energy_total_J"].iloc[0]
-                # if total is NaN (killed run) but MF is real, plot what we have
                 mf.append(mf_J if pd.notna(mf_J) else 0)
                 ts.append(ts_J if pd.notna(ts_J) else 0)
                 rs.append(rs_J if pd.notna(rs_J) else 0)
                 tot.append(tot_J if pd.notna(tot_J) and tot_J > 0
                            else (mf_J or 0) + (ts_J or 0))
+                rr = row.iloc[0]
+                lm_flags.append((hw.startswith("GPU") and pd.notna(rr.get("lm_save_gpu_GB")))
+                                or (hw.startswith("CPU") and pd.notna(rr.get("lm_save_cpu_GB"))))
             else:
-                mf.append(0); ts.append(0); rs.append(0); tot.append(np.nan)
+                mf.append(0); ts.append(0); rs.append(0); tot.append(np.nan); lm_flags.append(False)
         mf_wh = [v/3600 for v in mf]
         ts_wh = [v/3600 for v in ts]
         rs_wh = [v/3600 for v in rs]
+        hatches = ["////" if lm else None for lm in lm_flags]
         ax.bar(x, mf_wh, color=MF_COLOR, edgecolor="black", linewidth=0.4, width=0.7,
-               label="ModelFinder")
+               hatch=hatches, label="ModelFinder")
         ax.bar(x, ts_wh, bottom=mf_wh, color=TS_COLOR, edgecolor="black", linewidth=0.4,
-               width=0.7, label="Tree search")
+               width=0.7, hatch=hatches, label="Tree search")
         bot2 = [m + t for m, t in zip(mf_wh, ts_wh)]
         ax.bar(x, rs_wh, bottom=bot2, color=RS_COLOR, edgecolor="black", linewidth=0.4,
-               width=0.7, label="Init + finalization")
-        for i, top_J in enumerate(tot):
+               width=0.7, hatch=hatches, label="Init + finalization")
+        for i, (top_J, lm) in enumerate(zip(tot, lm_flags)):
             if pd.notna(top_J) and top_J > 0:
                 top_wh = top_J / 3600
-                ax.text(x[i], top_wh, _fmt_wh(top_J),
-                        ha="center", va="bottom", fontsize=8, rotation=90)
+                label = _fmt_wh(top_J) + (" ★" if lm else "")
+                ax.text(x[i], top_wh, label, ha="center", va="bottom", fontsize=8, rotation=90)
         title_sites = f"{s//1000}K" if s < 1_000_000 else f"{s//1_000_000}M"
         ax.set_title(f"{dt} — {title_sites}", fontsize=11)
         ax.set_xticks(x)
@@ -505,17 +687,25 @@ def linear_panels(df, test_name, fname, value_col="wall_total_s",
     x = np.arange(len(LINEAR_HW_ORDER))
     for ax, (dt, s) in zip(axes, cells):
         slice_ = sub[(sub.datatype == dt) & (sub.sites == s)]
-        vals = []
+        vals, lm_flags = [], []
         for hw in LINEAR_HW_ORDER:
             row = slice_[slice_.hardware == hw]
             v = row[value_col].iloc[0] if len(row) else np.nan
             vals.append(v if pd.notna(v) else np.nan)
+            if len(row):
+                rr = row.iloc[0]
+                lm_flags.append((hw.startswith("GPU") and pd.notna(rr.get("lm_save_gpu_GB")))
+                                or (hw.startswith("CPU") and pd.notna(rr.get("lm_save_cpu_GB"))))
+            else:
+                lm_flags.append(False)
         mins = [v / 60 if pd.notna(v) else np.nan for v in vals]
         colors = [LINEAR_HW_COLOR[h] for h in LINEAR_HW_ORDER]
-        bars = ax.bar(x, mins, color=colors, edgecolor="black", linewidth=0.4, width=0.7)
-        for b, raw in zip(bars, vals):
+        bars = ax.bar(x, mins, color=colors, edgecolor="black", linewidth=0.4, width=0.7,
+                      hatch=["////" if lm else None for lm in lm_flags])
+        for b, raw, lm in zip(bars, vals, lm_flags):
             if pd.notna(raw):
-                ax.text(b.get_x() + b.get_width()/2, b.get_height(), _fmt_min(raw),
+                label = _fmt_min(raw) + (" ★" if lm else "")
+                ax.text(b.get_x() + b.get_width()/2, b.get_height(), label,
                         ha="center", va="bottom", fontsize=8, rotation=90)
         title_sites = f"{s//1000}K" if s < 1_000_000 else f"{s//1_000_000}M"
         ax.set_title(f"{dt} — {title_sites}", fontsize=11)
@@ -537,6 +727,7 @@ def linear_panels(df, test_name, fname, value_col="wall_total_s",
                 "CLX = Cascade Lake Xeon 8274 (NCI `normal`, 48c).  "
                 "SPR = Sapphire Rapids 8480+ (NCI `normalsr`, 104c, -nt 103).  "
                 "GPU rows use the OpenACC build, host `-nt 1`.  "
+                "Hatched (////) + ★ = LM_MEM_SAVE auto-engaged → timing is 1.5–3× slower per likelihood eval.  "
                 "Missing bar = run didn't complete (no `Energy:` block) or wasn't submitted.")
     fig.text(0.5, -0.05, footnote, ha="center", fontsize=7, style="italic")
     fig.tight_layout(rect=[0, 0.02, 1, 0.96])
@@ -613,6 +804,8 @@ def main():
                                   stage_label="ModelFinder")
         # total energy stacked by stage (MF + tree-search + finalization)
         total_energy_byStage_panels(df, test, f"fig_energy_total_byStage_{test}.png")
+        # memory headroom grid
+        memory_grid(df, test, f"fig_memory_grid_{test}.png")
 
     # length sweep (1k / 100k / 1M / 10M)
     scaling_plot(df, "wall_total_s",
