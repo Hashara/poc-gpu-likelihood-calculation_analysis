@@ -1,0 +1,58 @@
+Simulated complex_data — 2026_06_24 snapshot analysis
+============================================================
+
+Source: /Users/u7826985/Projects/Nvidia/results/2026_06_24_simulated_results
+Total logs parsed:    55
+  COMPLETE       35
+  STILL_RUNNING  13
+  OOM            4
+  CRASHED        3
+
+Hardware variants present:
+  cudajolt_H200          runs=11  complete=3
+  cudajolt_V100          runs=9   complete=3
+  cpu_OMP_104            runs=6   complete=5
+  openACC_stable_H200    runs=6   complete=5
+  openACC_stable_H200_nt12 runs=6   complete=5
+  cpu_OMP_48             runs=5   complete=4
+  openACC_stable_V100    runs=5   complete=4
+  openACC_stable_V100_nt12 runs=5   complete=4
+  openACC_JOLT_h2tiling_H200 runs=1   complete=1
+  openACC_JOLT_h2tiling_H200_nt12 runs=1   complete=1
+
+Cells (datatype/model/taxa/sites) per completion count:
+  AA/LG+I+G4 taxa=100 L=100000     complete_HWs=8
+  AA/LG+I+G4 taxa=100 L=1000000    complete_HWs=6
+  DNA/GTR+I+G4 taxa=100 L=100000     complete_HWs=10
+  DNA/GTR+I+G4 taxa=100 L=1000000    complete_HWs=8
+  DNA/GTR+I+G4 taxa=100 L=10000000   complete_HWs=3
+
+Top 5 worst logL deltas vs cpu_OMP_104 (sanity):
+  openACC_stable_H200_nt12 DNA/GTR+I+G4 taxa=100 L=10000000   Δ=-2.894  rel=-5.00e-09
+  openACC_stable_H200  DNA/GTR+I+G4 taxa=100 L=10000000   Δ=-2.894  rel=-5.00e-09
+  cudajolt_V100        DNA/GTR+I+G4 taxa=100 L=1000000    Δ=+0.110  rel=1.86e-09
+  cudajolt_H200        DNA/GTR+I+G4 taxa=100 L=1000000    Δ=+0.110  rel=1.86e-09
+  openACC_stable_V100_nt12 DNA/GTR+I+G4 taxa=100 L=1000000    Δ=-0.038  rel=-6.42e-10
+
+Figures written:
+  fig_energy_breakdown.png
+  fig_energy_stacked_modelfinder.png
+  fig_energy_stacked_total.png
+  fig_energy_stacked_treesearch.png
+  fig_energy_total_byStage.png
+  fig_logL_agreement.png
+  fig_logL_agreement_v2.png
+  fig_memory_grid.png
+  fig_scaling_avg_power.png
+  fig_scaling_cpu_share.png
+  fig_scaling_energy_total.png
+  fig_scaling_wall_total.png
+  fig_scaling_wall_treesearch.png
+  fig_speedup_energy_heatmap.png
+  fig_speedup_vs_cpu48.png
+  fig_status_grid.png
+  fig_wall_modelfinder_linear.png
+  fig_wall_total_linear.png
+  fig_wall_treesearch_linear.png
+  fig_wall_vs_sites_AA_LG-I-G4.png
+  fig_wall_vs_sites_DNA_GTR-I-G4.png

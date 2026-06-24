@@ -42,7 +42,12 @@ def classify(name: str):
     parts = name.split("_")
     hw = "GPU_H200" if "H200" in parts else "GPU_V100" if "V100" in parts else "GPU_unknown"
     dt = "AA" if "AA" in parts else "DNA" if "DNA" in parts else "unknown"
-    rep = "test_2" if re.search(r"_test_2_", name) else "test_1"
+    if re.search(r"_test_3_", name):
+        rep = "test_3"
+    elif re.search(r"_test_2_", name):
+        rep = "test_2"
+    else:
+        rep = "test_1"
     m = RE_SITES.search(name)
     sites = int(m.group(1)) if m else None
     return hw, dt, rep, sites
@@ -100,17 +105,22 @@ for s in SITES:
     print(all_runs[all_runs["sites"] == s][key_cols].to_string(index=False))
 
 # ---------------------- plotting --------------------------------------------
-REP_ORDER  = ["baseline_06_13", "test_1", "test_2"]
-REP_COLORS = {"baseline_06_13": "#888", "test_1": "#1f77b4", "test_2": "#ff7f0e"}
+REP_ORDER  = ["baseline_06_13", "test_1", "test_2", "test_3"]
+REP_COLORS = {"baseline_06_13": "#888", "test_1": "#1f77b4",
+              "test_2": "#ff7f0e", "test_3": "#2ca02c"}
 REP_LABEL  = {"baseline_06_13": "2026_06_13 baseline",
-              "test_1": "2026_06_18 gpumem_fix (rep 1)",
-              "test_2": "2026_06_18 gpumem_fix (rep 2)"}
+              "test_1": "gpumem_fix rep 1",
+              "test_2": "gpumem_fix rep 2",
+              "test_3": "gpumem_fix rep 3 (new)"}
 
 def grouped_bar3(ax, df, metric, ylabel, title):
     cells = sorted(df["label"].unique())
-    x = np.arange(len(cells)); w = 0.27
-    offsets = {"baseline_06_13": -w, "test_1": 0.0, "test_2": w}
-    for rep in REP_ORDER:
+    reps_present = [r for r in REP_ORDER if r in df["rep"].values]
+    n = len(reps_present)
+    x = np.arange(len(cells))
+    w = 0.85 / n
+    offsets = {r: (i - (n - 1) / 2) * w for i, r in enumerate(reps_present)}
+    for rep in reps_present:
         vals = [df[(df["label"] == c) & (df["rep"] == rep)][metric].mean()
                 for c in cells]
         ax.bar(x + offsets[rep], vals, w,
@@ -122,11 +132,13 @@ def grouped_bar3(ax, df, metric, ylabel, title):
         b = df[(df["label"] == c) & (df["rep"] == "baseline_06_13")][metric].mean()
         if not np.isfinite(b) or b == 0:
             continue
-        for rep, off in [("test_1", 0.0), ("test_2", w)]:
+        for rep in reps_present:
+            if rep == "baseline_06_13":
+                continue
             v = df[(df["label"] == c) & (df["rep"] == rep)][metric].mean()
             if np.isfinite(v):
-                ax.text(i + off, v * 1.01, f"{100*(v-b)/b:+.1f}%",
-                        ha="center", fontsize=7)
+                ax.text(i + offsets[rep], v * 1.01, f"{100*(v-b)/b:+.1f}%",
+                        ha="center", fontsize=6)
 
 def sites_tag(s):
     return f"{int(s/1_000_000)}M" if s >= 1_000_000 else f"{int(s/1000)}k"

@@ -2,6 +2,10 @@
 + OpenACC H200/V100 (baseline 2026_06_13) vs OpenACC H200/V100 (gpumem_fix
 2026_06_18). Run for AA and DNA, 1M and 10M sites.
 
+For each (hardware, sites, datatype) cell we pick the most recent COMPLETED
+gpumem_fix rep (test_3 > test_2 > test_1). The rep used is appended to the
+label so the chart is unambiguous.
+
 Produces fig_{aa,dna}{tag}_cpu_vs_gpu.png with three panels: wall time,
 peak memory (CPU + GPU), and energy (CPU + GPU stacked).
 """
@@ -16,38 +20,56 @@ BASE_CSV = Path("/Users/u7826985/Projects/Nvidia/poc-gpu-likelihood-calculation_
 NEW_DIR  = Path("/Users/u7826985/Projects/Nvidia/results/2026_06_18_gpumem_fix")
 OUT_DIR  = Path(__file__).resolve().parent
 
-LABEL = {
+REP_RANK = {"test_3": 3, "test_2": 2, "test_1": 1}  # higher = preferred
+
+LABEL_BASE = {
     "CPU_CLX_OMP48":   "CPU Intel CLX (OMP48)",
     "CPU_SPR_OMP104":  "CPU Intel SPR (OMP104)",
     "GPU_H200":        "OpenACC H200 (old)",
     "GPU_V100":        "OpenACC V100 (old)",
-    "GPU_H200_fix":    "OpenACC H200 (gpumem_fix)",
-    "GPU_V100_fix":    "OpenACC V100 (gpumem_fix)",
+    "GPU_H200_fix":    "OpenACC H200 (gpumem_fix",
+    "GPU_V100_fix":    "OpenACC V100 (gpumem_fix",
 }
 COLOR = {
     "CPU_CLX_OMP48":   "#4c72b0",
     "CPU_SPR_OMP104":  "#55a868",
     "GPU_H200":        "#c44e52",
     "GPU_V100":        "#8172b2",
-    "GPU_H200_fix":    "#dd8452",
-    "GPU_V100_fix":    "#937860",
+    "GPU_H200_fix":    "#2ca02c",
+    "GPU_V100_fix":    "#17becf",
 }
+
+def classify_log(name: str) -> tuple[str, str]:
+    parts = name.split("_")
+    hw = ("GPU_H200_fix" if "H200" in parts
+          else "GPU_V100_fix" if "V100" in parts else "GPU_unknown_fix")
+    if re.search(r"_test_3_", name): rep = "test_3"
+    elif re.search(r"_test_2_", name): rep = "test_2"
+    else: rep = "test_1"
+    return hw, rep
 
 def parse_new_log(p: Path) -> dict:
     txt = p.read_text(errors="ignore")
-    def _f(pat, t=txt, g=1, flags=re.M):
-        m = re.search(pat, t, flags)
+    def _f(pat, g=1, flags=re.M):
+        m = re.search(pat, txt, flags)
         return float(m.group(g)) if m else np.nan
-    hw = ("GPU_H200_fix" if "H200" in p.name.split("_")
-          else "GPU_V100_fix" if "V100" in p.name.split("_") else "GPU_unknown_fix")
+    hw, rep = classify_log(p.name)
     return {
         "hardware": hw,
+        "rep": rep,
         "wall_s":          _f(r"Total wall-clock time used:\s+([\d.]+)\s+sec"),
         "energy_cpu_J":    _f(r"Energy:\s*\n\s*CPU:\s+([\d.]+)\s+J"),
         "energy_gpu_J":    _f(r"^\s*GPU:\s+([\d.]+)\s+J"),
         "gpu_mem_peak_MB": _f(r"GPU mem:\s+([\d.]+)\s*/"),
         "cpu_mem_peak_MB": _f(r"CPU mem:\s+([\d.]+)\s*/"),
     }
+
+def pick_latest(rows: list[dict]) -> dict | None:
+    """Pick the highest-rep row that has a completed wall_s."""
+    done = [r for r in rows if np.isfinite(r.get("wall_s", np.nan))]
+    if not done:
+        return None
+    return max(done, key=lambda r: REP_RANK[r["rep"]])
 
 def build_table(sites: int, datatype: str) -> pd.DataFrame:
     base = pd.read_csv(BASE_CSV)
@@ -56,13 +78,19 @@ def build_table(sites: int, datatype: str) -> pd.DataFrame:
     base = base[["hardware", "wall_total_s", "energy_cpu_J", "energy_gpu_J",
                  "energy_total_J", "gpu_mem_peak_MB", "cpu_mem_peak_MB"]
                ].rename(columns={"wall_total_s": "wall_s"})
+    base["rep"] = "baseline"
 
     pattern = f"_tree_1_{sites}_"
-    new_rows = [parse_new_log(p) for p in sorted(NEW_DIR.glob("*.log"))
-                if datatype in p.name.split("_") and pattern in p.name]
-    for r in new_rows:
+    by_hw: dict[str, list[dict]] = {}
+    for p in sorted(NEW_DIR.glob("*.log")):
+        if datatype not in p.name.split("_") or pattern not in p.name:
+            continue
+        r = parse_new_log(p)
         r["energy_total_J"] = (r.get("energy_cpu_J") or 0) + (r.get("energy_gpu_J") or 0)
-    new = pd.DataFrame(new_rows)
+        by_hw.setdefault(r["hardware"], []).append(r)
+
+    chosen = [pick_latest(rows) for rows in by_hw.values()]
+    new = pd.DataFrame([r for r in chosen if r is not None])
 
     df = pd.concat([base, new], ignore_index=True, sort=False)
     order = [h for h in ["CPU_CLX_OMP48", "CPU_SPR_OMP104",
@@ -70,7 +98,13 @@ def build_table(sites: int, datatype: str) -> pd.DataFrame:
                          "GPU_V100", "GPU_V100_fix"]
              if h in df["hardware"].values]
     df = df.set_index("hardware").loc[order].reset_index()
-    df["label"] = df["hardware"].map(LABEL)
+
+    def lbl(row):
+        base_lbl = LABEL_BASE[row["hardware"]]
+        if "fix" in row["hardware"]:
+            return f"{base_lbl} {row['rep']})"
+        return base_lbl
+    df["label"] = df.apply(lbl, axis=1)
     return df
 
 def plot(df: pd.DataFrame, tag: str, datatype: str):
@@ -139,7 +173,7 @@ def plot(df: pd.DataFrame, tag: str, datatype: str):
     print(f"Wrote {out}")
 
 for datatype in ("DNA", "AA"):
-    for sites, tag in [(1_000_000, "1M"), (10_000_000, "10M")]:
+    for sites, tag in [(100_000, "100k"), (1_000_000, "1M"), (10_000_000, "10M")]:
         df = build_table(sites, datatype)
         if df.empty:
             continue
