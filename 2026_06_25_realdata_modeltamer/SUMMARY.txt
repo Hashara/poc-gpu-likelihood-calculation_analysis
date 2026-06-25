@@ -1,0 +1,66 @@
+Real-data empirical IQ-TREE results — 2026_06_25 snapshot
+============================================================
+
+Source: /Users/u7826985/Projects/Nvidia/results/2026_06_25_realdata_modeltamer
+Total logs parsed:  77
+  COMPLETE       46
+  STILL_RUNNING  17
+  CRASHED        14
+
+Hardware variants (runs / complete):
+  cpu_OMP_104            runs=11  complete=9
+  cpu_OMP_48             runs=11  complete=8
+  openACC_H200           runs=10  complete=7
+  openACC_H200_nt12      runs=10  complete=6
+  openACC_V100           runs=10  complete=5
+  openACC_V100_nt12      runs=10  complete=3
+  openACC_A100           runs=8   complete=5
+  openACC_A100_nt12      runs=7   complete=3
+
+Cells (datatype/dataset/taxa/sites) with completion count:
+  AA  Green_plants   taxa=360  L=19449     complete_HWs=3
+  AA  Yeast_nc       taxa=23   L=634530    complete_HWs=4
+  DNA Lassa_Virus    taxa=179  L=3226      complete_HWs=2
+  DNA Mammal_B       taxa=274  L=7463      complete_HWs=6
+  DNA Birds          taxa=200  L=394686    complete_HWs=6
+  DNA Mammal         taxa=37   L=1409139   complete_HWs=8
+  DNA InsectsB       taxa=48   L=2938039   complete_HWs=8
+  DNA Plants         taxa=16   L=4246454   complete_HWs=8
+  DNA Butterfly      taxa=61   L=5267461   complete_HWs=1
+
+Top 8 worst |Δ logL| vs cpu_OMP_104 (sanity):
+  openACC_V100_nt12      DNA/InsectsB       taxa=48   L=2938039  Δ= -885.371  rel=-3.31e-05
+  openACC_V100           DNA/InsectsB       taxa=48   L=2938039  Δ= -885.371  rel=-3.31e-05
+  openACC_A100_nt12      DNA/InsectsB       taxa=48   L=2938039  Δ= -646.840  rel=-2.42e-05
+  openACC_A100           DNA/InsectsB       taxa=48   L=2938039  Δ= -646.840  rel=-2.42e-05
+  openACC_H200_nt12      DNA/InsectsB       taxa=48   L=2938039  Δ= -624.902  rel=-2.34e-05
+  openACC_H200           DNA/InsectsB       taxa=48   L=2938039  Δ= -624.902  rel=-2.34e-05
+  openACC_H200_nt12      DNA/Mammal         taxa=37   L=1409139  Δ= -322.098  rel=-2.45e-05
+  openACC_H200           DNA/Mammal         taxa=37   L=1409139  Δ= -322.098  rel=-2.45e-05
+
+Median speedup vs cpu_OMP_48 by hardware (across all cells):
+  openACC_H200            6.09×
+  openACC_H200_nt12       3.64×
+  cpu_OMP_104             2.32×
+  openACC_A100            2.19×
+  openACC_V100            1.78×
+  openACC_V100_nt12       1.75×
+  openACC_A100_nt12       1.48×
+  cpu_OMP_48              1.00×
+
+Figures written:
+  fig_energy_stacked.png
+  fig_energy_stacked_modelfinder.png
+  fig_energy_stacked_total.png
+  fig_energy_stacked_treesearch.png
+  fig_energy_total_byStage.png
+  fig_logL_agreement.png
+  fig_memory.png
+  fig_memory_grid.png
+  fig_modelfinder_vs_tree.png
+  fig_speedup_vs_cpu48.png
+  fig_status_grid.png
+  fig_wall_modelfinder_linear.png
+  fig_wall_per_dataset.png
+  fig_wall_total_linear.png
+  fig_wall_treesearch_linear.png
