@@ -3,15 +3,15 @@ Real-data empirical IQ-TREE results — 2026_06_25 snapshot
 
 Source: /Users/u7826985/Projects/Nvidia/results/2026_06_25_realdata_modeltamer
 Total logs parsed:  131
-  COMPLETE       73
-  STILL_RUNNING  30
+  COMPLETE       76
   CRASHED        28
+  STILL_RUNNING  27
 
 Hardware variants (runs / complete):
-  unknown                runs=34  complete=20
+  unknown                runs=34  complete=22
   openACC_V100           runs=16  complete=8
   openACC_A100           runs=14  complete=8
-  openACC_H200           runs=14  complete=8
+  openACC_H200           runs=14  complete=9
   cpu_OMP_48             runs=12  complete=8
   cpu_OMP_104            runs=11  complete=9
   openACC_A100_nt12      runs=10  complete=3
@@ -27,17 +27,17 @@ Cells (datatype/dataset/taxa/sites) with completion count:
   DNA Mammal         taxa=37   L=1409139   complete_HWs=10
   DNA InsectsB       taxa=48   L=2938039   complete_HWs=10
   DNA Plants         taxa=16   L=4246454   complete_HWs=12
-  DNA Butterfly      taxa=61   L=5267461   complete_HWs=1
+  DNA Butterfly      taxa=61   L=5267461   complete_HWs=4
 
 Top 8 worst |Δ logL| vs cpu_OMP_104 (sanity):
   unknown                DNA/Birds          taxa=200  L=394686   Δ=-22499.104  rel=-2.38e-03
   unknown                DNA/InsectsB       taxa=48   L=2938039  Δ=-12184.043  rel=-4.56e-04
+  unknown                DNA/Butterfly      taxa=61   L=5267461  Δ=-6997.688  rel=-8.44e-05
   unknown                DNA/Plants         taxa=16   L=4246454  Δ=+5420.187  rel=+3.52e-04
   unknown                DNA/Plants         taxa=16   L=4246454  Δ=+5416.693  rel=+3.52e-04
   unknown                DNA/Mammal         taxa=37   L=1409139  Δ=-3745.363  rel=-2.84e-04
   unknown                AA/Green_plants   taxa=360  L=19449    Δ=-2014.564  rel=-1.43e-03
   unknown                DNA/Lassa_Virus    taxa=179  L=3226     Δ= +904.719  rel=+1.41e-02
-  unknown                DNA/Lassa_Virus    taxa=179  L=3226     Δ= +904.336  rel=+1.41e-02
 
 Median speedup vs cpu_OMP_48 by hardware (across all cells):
   openACC_H200            4.60×
