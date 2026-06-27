@@ -3,14 +3,14 @@ Real-data empirical IQ-TREE results — 2026_06_25 snapshot
 
 Source: /Users/u7826985/Projects/Nvidia/results/2026_06_25_realdata_modeltamer
 Total logs parsed:  131
-  COMPLETE       76
+  COMPLETE       77
   CRASHED        28
-  STILL_RUNNING  27
+  STILL_RUNNING  26
 
 Hardware variants (runs / complete):
   unknown                runs=34  complete=22
   openACC_V100           runs=16  complete=8
-  openACC_A100           runs=14  complete=8
+  openACC_A100           runs=14  complete=9
   openACC_H200           runs=14  complete=9
   cpu_OMP_48             runs=12  complete=8
   cpu_OMP_104            runs=11  complete=9
@@ -27,7 +27,7 @@ Cells (datatype/dataset/taxa/sites) with completion count:
   DNA Mammal         taxa=37   L=1409139   complete_HWs=10
   DNA InsectsB       taxa=48   L=2938039   complete_HWs=10
   DNA Plants         taxa=16   L=4246454   complete_HWs=12
-  DNA Butterfly      taxa=61   L=5267461   complete_HWs=4
+  DNA Butterfly      taxa=61   L=5267461   complete_HWs=5
 
 Top 8 worst |Δ logL| vs cpu_OMP_104 (sanity):
   unknown                DNA/Birds          taxa=200  L=394686   Δ=-22499.104  rel=-2.38e-03
