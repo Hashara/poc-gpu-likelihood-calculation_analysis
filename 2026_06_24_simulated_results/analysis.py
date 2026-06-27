@@ -33,8 +33,10 @@ ROOT = Path("/Users/u7826985/Projects/Nvidia/results/2026_06_24_simulated_result
 OUT = Path(__file__).resolve().parent
 
 # ---------- regexes ----------
-RE_TOTAL_WALL = re.compile(r"Total wall-clock time used:\s+([\d.]+)\s+sec")
-RE_TREE_WALL  = re.compile(r"Wall-clock time used for tree search:\s+([\d.]+)\s+sec")
+RE_TOTAL_WALL    = re.compile(r"Total wall-clock time used:\s+([\d.]+)\s+sec")
+RE_TOTAL_WALL_PR = re.compile(r"Total wall-clock time used \(including previous runs\):\s+([\d.]+)\s+sec")
+RE_TREE_WALL     = re.compile(r"Wall-clock time used for tree search:\s+([\d.]+)\s+sec")
+RE_TREE_WALL_PR  = re.compile(r"Wall-clock time used for tree search \(including previous runs\):\s+([\d.]+)\s+sec")
 RE_BEST_LOGL  = re.compile(r"BEST SCORE FOUND\s*:\s*(-?[\d.]+)")
 RE_FAST_ML    = re.compile(r"Time for fast ML tree search:\s+([\d.]+)\s+seconds")
 RE_E_CPU      = re.compile(r"Energy:\s*\n\s*CPU:\s+([\d.]+)\s+J", re.M)
@@ -121,8 +123,11 @@ for log in sorted(ROOT.rglob("output_*.log")):
         "nt": int(nt.group(1)) if nt else None,
         "host": host.group(1) if host else None,
         "distinct_patterns": int(pat.group(3)) if pat else None,
-        "wall_total_s": _f(RE_TOTAL_WALL, txt),
-        "wall_tree_s":  _f(RE_TREE_WALL, txt),
+        # Prefer cumulative "(including previous runs)" totals when present
+        # (resumed checkpoint runs report both the current-portion and the cumulative).
+        "wall_total_s": _f(RE_TOTAL_WALL_PR, txt) or _f(RE_TOTAL_WALL, txt),
+        "wall_tree_s":  _f(RE_TREE_WALL_PR,  txt) or _f(RE_TREE_WALL,  txt),
+        "is_resumed":   bool(RE_TOTAL_WALL_PR.search(txt)),
         "wall_fastml_s": _f(RE_FAST_ML, txt),
         "best_logL": _f(RE_BEST_LOGL, txt),
         "energy_cpu_total_J": _f(RE_E_CPU, txt),

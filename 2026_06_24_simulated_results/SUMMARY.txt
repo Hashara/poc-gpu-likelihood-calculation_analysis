@@ -2,18 +2,18 @@ Simulated complex_data — 2026_06_24 snapshot analysis
 ============================================================
 
 Source: /Users/u7826985/Projects/Nvidia/results/2026_06_24_simulated_results
-Total logs parsed:    55
-  COMPLETE       35
-  STILL_RUNNING  13
-  OOM            4
+Total logs parsed:    63
+  COMPLETE       39
+  STILL_RUNNING  15
+  OOM            6
   CRASHED        3
 
 Hardware variants present:
-  cudajolt_H200          runs=11  complete=3
-  cudajolt_V100          runs=9   complete=3
-  cpu_OMP_104            runs=6   complete=5
-  openACC_stable_H200    runs=6   complete=5
-  openACC_stable_H200_nt12 runs=6   complete=5
+  cudajolt_H200          runs=15  complete=4
+  cudajolt_V100          runs=13  complete=3
+  cpu_OMP_104            runs=6   complete=6
+  openACC_stable_H200    runs=6   complete=6
+  openACC_stable_H200_nt12 runs=6   complete=6
   cpu_OMP_48             runs=5   complete=4
   openACC_stable_V100    runs=5   complete=4
   openACC_stable_V100_nt12 runs=5   complete=4
@@ -22,7 +22,8 @@ Hardware variants present:
 
 Cells (datatype/model/taxa/sites) per completion count:
   AA/LG+I+G4 taxa=100 L=100000     complete_HWs=8
-  AA/LG+I+G4 taxa=100 L=1000000    complete_HWs=6
+  AA/LG+I+G4 taxa=100 L=1000000    complete_HWs=7
+  AA/LG+I+G4 taxa=100 L=10000000   complete_HWs=3
   DNA/GTR+I+G4 taxa=100 L=100000     complete_HWs=10
   DNA/GTR+I+G4 taxa=100 L=1000000    complete_HWs=8
   DNA/GTR+I+G4 taxa=100 L=10000000   complete_HWs=3
@@ -30,9 +31,9 @@ Cells (datatype/model/taxa/sites) per completion count:
 Top 5 worst logL deltas vs cpu_OMP_104 (sanity):
   openACC_stable_H200_nt12 DNA/GTR+I+G4 taxa=100 L=10000000   Δ=-2.894  rel=-5.00e-09
   openACC_stable_H200  DNA/GTR+I+G4 taxa=100 L=10000000   Δ=-2.894  rel=-5.00e-09
+  cudajolt_H200        AA/LG+I+G4 taxa=100 L=1000000    Δ=+0.138  rel=1.76e-09
   cudajolt_V100        DNA/GTR+I+G4 taxa=100 L=1000000    Δ=+0.110  rel=1.86e-09
   cudajolt_H200        DNA/GTR+I+G4 taxa=100 L=1000000    Δ=+0.110  rel=1.86e-09
-  openACC_stable_V100_nt12 DNA/GTR+I+G4 taxa=100 L=1000000    Δ=-0.038  rel=-6.42e-10
 
 Figures written:
   fig_energy_breakdown.png
