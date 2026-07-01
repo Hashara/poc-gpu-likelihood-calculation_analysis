@@ -55,9 +55,14 @@ def _f(rx, txt, grp=1):
 
 # ---------- classify file name ----------
 # Distinguishes openACC stable vs JOLT_h2tiling builds, and presence of _nt12 pin.
+# `cudajolt_modelwise_*` is a different workload (skips ModelFinder); bucketed
+# separately so it doesn't pollute the cudajolt_{H200,V100} cells which assume
+# full ModelFinder + tree search.
 def hardware_of(name: str) -> str:
     if "cpu_bfgs" in name and "OMP_104" in name: return "cpu_OMP_104"
     if "cpu_bfgs" in name and "OMP_48"  in name: return "cpu_OMP_48"
+    if "cudajolt_modelwise" in name and "H200" in name: return "cudajolt_modelwise_H200"
+    if "cudajolt_modelwise" in name and "V100" in name: return "cudajolt_modelwise_V100"
     if "cudajolt" in name and "H200" in name:    return "cudajolt_H200"
     if "cudajolt" in name and "V100" in name:    return "cudajolt_V100"
     # JOLT_h2tiling build (different OpenACC implementation):
@@ -90,10 +95,17 @@ def status_from_log(text: str, has_treefile: bool) -> str:
 
 rows = []
 for log in sorted(ROOT.rglob("output_*.log")):
-    txt = log.read_text(errors="ignore")
     rel = log.relative_to(ROOT)
-    # path: <DT>/<MODEL>/taxa_<N>/len_<L>/tree_1/<file>
     parts = rel.parts
+    # Skip the modelwise/ subfolder — its runs are analysed separately in
+    # modelwise/analysis.py. Also skip any run whose path doesn't match the
+    # expected <DT>/<MODEL>/taxa_<N>/len_<L>/tree_1/<file> layout (e.g. new
+    # bootstrap sweeps that land under a different subtree).
+    if parts[0] == "modelwise":
+        continue
+    if len(parts) < 6 or not parts[2].startswith("taxa_") or not parts[3].startswith("len_"):
+        continue
+    txt = log.read_text(errors="ignore")
     datatype = parts[0]
     model    = parts[1]
     taxa     = int(parts[2].split("_")[1])
@@ -167,9 +179,7 @@ print(f"COMPLETE runs: {len(ok)}")
 HW_ORDER = ["cpu_OMP_48", "cpu_OMP_104",
             "cudajolt_V100", "cudajolt_H200",
             "openACC_stable_V100",
-            "openACC_stable_H200",
-            "openACC_JOLT_h2tiling_V100",
-            "openACC_JOLT_h2tiling_H200"]
+            "openACC_stable_H200"]
 STATUS_COLOR = {"COMPLETE": "#2ca02c", "STILL_RUNNING": "#1f77b4",
                 "CRASHED": "#d62728", "OOM": "#ff7f0e",
                 "ERROR": "#7f7f7f"}
@@ -208,8 +218,8 @@ plt.close(fig)
 HW_STYLE = {
     "cpu_OMP_48":                       dict(color="#666666", marker="o", ls="-"),
     "cpu_OMP_104":                      dict(color="#000000", marker="o", ls="-"),
-    "cudajolt_V100":                    dict(color="#9ecae1", marker="s", ls="--"),
-    "cudajolt_H200":                    dict(color="#3182bd", marker="s", ls="--"),
+    "cudajolt_V100":                    dict(color="#c7a3d9", marker="s", ls="--"),
+    "cudajolt_H200":                    dict(color="#54278f", marker="s", ls="--"),
     "openACC_stable_V100":              dict(color="#c476a8", marker="^", ls=":"),
     "openACC_stable_V100_nt12":         dict(color="#a01a78", marker="^", ls="-"),
     "openACC_stable_H200":              dict(color="#74c476", marker="D", ls=":"),

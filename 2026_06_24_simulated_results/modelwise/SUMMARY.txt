@@ -1,0 +1,49 @@
+Modelwise analysis — 2026_06_24 subfolder
+============================================================
+
+Source: /Users/u7826985/Projects/Nvidia/results/2026_06_24_simulated_results/modelwise
+Total logs parsed:    186
+  COMPLETE     186
+
+Builds × models per cell (COMPLETE only):
+  AA/100K   cpu_OMP_104       LG,LG+G4,LG+I,LG+I+G4,LG+I+R1,LG+I+R2,LG+I+R3,LG+I+R4,LG+I+R5,LG+I+R6,LG+I+R7,LG+R1,LG+R2,LG+R3,LG+R4,LG+R5,LG+R6,LG+R7
+  AA/100K   cudajolt_H200     LG,LG+G4,LG+I,LG+I+G4,LG+I+R1,LG+I+R2,LG+I+R3,LG+I+R4,LG+I+R5,LG+I+R6,LG+I+R7,LG+R1,LG+R2,LG+R3,LG+R4,LG+R5,LG+R6,LG+R7
+  AA/100K   openACC_H200      LG,LG+G4,LG+I,LG+I+G4,LG+I+R1,LG+I+R2,LG+I+R3,LG+I+R4,LG+I+R5,LG+I+R6,LG+I+R7,LG+R1,LG+R2,LG+R3,LG+R4,LG+R5,LG+R6,LG+R7
+  AA/1M     cpu_OMP_104       LG,LG+G4,LG+I,LG+I+G4,LG+I+R1,LG+I+R2,LG+I+R3,LG+I+R4,LG+I+R5,LG+I+R6,LG+I+R7,LG+R1,LG+R2,LG+R3,LG+R4,LG+R5,LG+R6,LG+R7
+  AA/1M     cudajolt_H200     LG,LG+G4,LG+I,LG+I+G4,LG+I+R1,LG+I+R2,LG+I+R3,LG+I+R4,LG+I+R6,LG+I+R7,LG+R1,LG+R2,LG+R3,LG+R4,LG+R5,LG+R6,LG+R7
+  AA/1M     openACC_H200      LG,LG+G4,LG+I,LG+I+G4,LG+I+R1,LG+I+R2,LG+I+R3,LG+I+R4,LG+I+R5,LG+I+R7,LG+R1,LG+R2,LG+R3,LG+R4,LG+R5,LG+R6,LG+R7
+  AA/10M    cpu_OMP_104       LG,LG+G4,LG+I,LG+I+G4,LG+I+R1,LG+I+R2,LG+I+R3,LG+I+R4,LG+I+R5,LG+I+R6,LG+I+R7,LG+R1,LG+R2,LG+R3,LG+R4,LG+R5,LG+R6,LG+R7
+  AA/10M    cudajolt_H200     LG,LG+G4,LG+I,LG+I+G4,LG+I+R1,LG+I+R2,LG+I+R3,LG+R1,LG+R3,LG+R4
+  AA/10M    openACC_H200      LG,LG+G4,LG+I,LG+I+G4,LG+I+R2,LG+I+R3,LG+I+R4,LG+I+R5,LG+I+R6,LG+I+R7,LG+R1,LG+R2,LG+R3,LG+R4,LG+R6,LG+R7
+  DNA/100K   cpu_OMP_104       GTR,GTR+G4,GTR+I,GTR+I+G4
+  DNA/100K   cudajolt_H200     GTR,GTR+G4,GTR+I,GTR+I+G4
+  DNA/100K   openACC_H200      GTR,GTR+G4,GTR+I,GTR+I+G4
+  DNA/1M     cpu_OMP_104       GTR,GTR+G4,GTR+I,GTR+I+G4
+  DNA/1M     cudajolt_H200     GTR,GTR+G4,GTR+I,GTR+I+G4
+  DNA/1M     openACC_H200      GTR,GTR+G4,GTR+I,GTR+I+G4
+  DNA/10M    cpu_OMP_104       GTR,GTR+G4,GTR+I,GTR+I+G4
+  DNA/10M    cudajolt_H200     GTR,GTR+G4,GTR+I,GTR+I+G4
+  DNA/10M    openACC_H200      GTR,GTR+G4,GTR+I,GTR+I+G4
+
+Top median GPU speedup vs CPU SPR 104T:
+                 median       min        max  count
+build                                              
+cudajolt_H200  0.285857  0.072325  31.655099     57
+openACC_H200   1.897624  1.080346   4.416485     63
+
+logL agreement (Δ from CPU ref):
+                       mean           min       max
+build                                              
+cpu_OMP_104    0.000000e+00  0.000000e+00  0.000000
+cudajolt_H200  4.380702e-02 -2.850000e-01  0.674000
+openACC_H200  -1.095054e+07 -6.268238e+08  1.264994
+
+Figures:
+  fig_logL_agreement_AA.png
+  fig_logL_agreement_DNA.png
+  fig_speedup_heatmap_AA.png
+  fig_speedup_heatmap_DNA.png
+  fig_wall_by_model_AA.png
+  fig_wall_by_model_DNA.png
+  fig_wall_scaling_AA.png
+  fig_wall_scaling_DNA.png

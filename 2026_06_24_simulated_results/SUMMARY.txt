@@ -2,15 +2,17 @@ Simulated complex_data — 2026_06_24 snapshot analysis
 ============================================================
 
 Source: /Users/u7826985/Projects/Nvidia/results/2026_06_24_simulated_results
-Total logs parsed:    63
-  COMPLETE       39
-  STILL_RUNNING  15
+Total logs parsed:    255
+  COMPLETE       220
+  STILL_RUNNING  26
   OOM            6
   CRASHED        3
 
 Hardware variants present:
+  unknown                runs=135 complete=130
+  cudajolt_modelwise_H200 runs=57  complete=50
   cudajolt_H200          runs=15  complete=4
-  cudajolt_V100          runs=13  complete=3
+  cudajolt_V100          runs=13  complete=4
   cpu_OMP_104            runs=6   complete=6
   openACC_stable_H200    runs=6   complete=6
   openACC_stable_H200_nt12 runs=6   complete=6
@@ -21,19 +23,23 @@ Hardware variants present:
   openACC_JOLT_h2tiling_H200_nt12 runs=1   complete=1
 
 Cells (datatype/model/taxa/sites) per completion count:
-  AA/LG+I+G4 taxa=100 L=100000     complete_HWs=8
-  AA/LG+I+G4 taxa=100 L=1000000    complete_HWs=7
-  AA/LG+I+G4 taxa=100 L=10000000   complete_HWs=3
-  DNA/GTR+I+G4 taxa=100 L=100000     complete_HWs=10
-  DNA/GTR+I+G4 taxa=100 L=1000000    complete_HWs=8
-  DNA/GTR+I+G4 taxa=100 L=10000000   complete_HWs=3
+  AA/LG+I+G4 taxa=100 L=1000       complete_HWs=2
+  AA/LG+I+G4 taxa=100 L=10000      complete_HWs=2
+  AA/LG+I+G4 taxa=100 L=100000     complete_HWs=48
+  AA/LG+I+G4 taxa=100 L=1000000    complete_HWs=57
+  AA/LG+I+G4 taxa=100 L=10000000   complete_HWs=46
+  DNA/GTR+I+G4 taxa=100 L=1000       complete_HWs=2
+  DNA/GTR+I+G4 taxa=100 L=10000      complete_HWs=2
+  DNA/GTR+I+G4 taxa=100 L=100000     complete_HWs=24
+  DNA/GTR+I+G4 taxa=100 L=1000000    complete_HWs=22
+  DNA/GTR+I+G4 taxa=100 L=10000000   complete_HWs=15
 
 Top 5 worst logL deltas vs cpu_OMP_104 (sanity):
-  openACC_stable_H200_nt12 DNA/GTR+I+G4 taxa=100 L=10000000   Δ=-2.894  rel=-5.00e-09
-  openACC_stable_H200  DNA/GTR+I+G4 taxa=100 L=10000000   Δ=-2.894  rel=-5.00e-09
-  cudajolt_H200        AA/LG+I+G4 taxa=100 L=1000000    Δ=+0.138  rel=1.76e-09
-  cudajolt_V100        DNA/GTR+I+G4 taxa=100 L=1000000    Δ=+0.110  rel=1.86e-09
-  cudajolt_H200        DNA/GTR+I+G4 taxa=100 L=1000000    Δ=+0.110  rel=1.86e-09
+  unknown              AA/LG+I+G4 taxa=100 L=1000000    Δ=-631177516.327  rel=-8.03e+00
+  unknown              AA/LG+I+G4 taxa=100 L=100000     Δ=-63436294.429  rel=-8.41e+00
+  unknown              AA/LG+I+G4 taxa=100 L=10000000   Δ=-45187390.369  rel=-5.77e-02
+  unknown              AA/LG+I+G4 taxa=100 L=10000000   Δ=-45187390.368  rel=-5.77e-02
+  unknown              AA/LG+I+G4 taxa=100 L=10000000   Δ=-45187390.368  rel=-5.77e-02
 
 Figures written:
   fig_energy_breakdown.png

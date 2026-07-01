@@ -1,0 +1,62 @@
+Bootstrap runs — 2026_06_25 real-data set
+============================================================
+
+Source: /Users/u7826985/Projects/Nvidia/results/2026_06_25_realdata_modeltamer/bootstrap
+Total logs parsed: 34
+  COMPLETE       19
+  STILL_RUNNING  10
+  CRASHED        5
+
+Counts by (variant, cpu):
+  BOOT100     OMP_104   runs=11  complete=7  crashed=2  running=2
+  BOOT100     OMP_48    runs=7  complete=1  crashed=0  running=6
+  UFBOOT1000  OMP_104   runs=11  complete=9  crashed=2  running=0
+  UFBOOT1000  OMP_48    runs=5  complete=2  crashed=1  running=2
+
+COMPLETE runs — wall time (h):
+  Birds          BOOT100     OMP_104  GTR+F+I+R9           wall=33.45h  logL=-9,465,710.5
+  Birds          UFBOOT1000  OMP_104  GTR+F+I+R9           wall=2.68h  logL=-9,443,208.3
+  Butterfly      UFBOOT1000  OMP_104  GTR+F+I+R8           wall=22.62h  logL=-82,918,692.6
+  Green_plants   UFBOOT1000  OMP_104  Q.BIRD+F+R10         wall=5.60h  logL=-1,410,001.2
+  InsectsB       BOOT100     OMP_104  GTR+F+I+R6           wall=10.32h  logL=-26,723,945.9
+  InsectsB       UFBOOT1000  OMP_104  GTR+F+I+R6           wall=3.64h  logL=-26,711,760.1
+  Lassa_Virus    BOOT100     OMP_104  GTR+R5               wall=7.80h  logL=-63,266.8
+  Lassa_Virus    BOOT100     OMP_48   GTR+R5               wall=4.52h  logL=-63,267.2
+  Lassa_Virus    UFBOOT1000  OMP_104  GTR+R5               wall=0.05h  logL=-64,171.5
+  Lassa_Virus    UFBOOT1000  OMP_48   GTR+R5               wall=0.12h  logL=-64,171.7
+  Mammal         BOOT100     OMP_104  GTR+F+R5             wall=11.35h  logL=-13,172,868.9
+  Mammal         UFBOOT1000  OMP_104  GTR+F+R5             wall=1.04h  logL=-13,169,123.5
+  Mammal_B       BOOT100     OMP_104  GTR+F+R8             wall=13.45h  logL=-338,517.5
+  Mammal_B       UFBOOT1000  OMP_104  GTR+F+R8             wall=0.13h  logL=-338,398.6
+  Plants         BOOT100     OMP_104  GTR+F+I+R5           wall=1.03h  logL=-15,403,089.4
+  Plants         UFBOOT1000  OMP_104  GTR+F+I+R5           wall=0.05h  logL=-15,408,509.6
+  Plants         UFBOOT1000  OMP_48   GTR+F+I+R4           wall=0.11h  logL=-15,408,512.0
+  Yeast_nc       BOOT100     OMP_104  Q.YEAST+I+R8         wall=44.14h  logL=-12,795,214.3
+  Yeast_nc       UFBOOT1000  OMP_104  Q.YEAST+I+R8         wall=10.65h  logL=-12,794,856.4
+
+Bootstrap support (COMPLETE runs with contree/splits):
+  Birds          BOOT100     OMP_104  n=197  median=100.0  ≥95=176  <70= 14
+  Birds          UFBOOT1000  OMP_104  n=197  median=100.0  ≥95=182  <70=  6
+  Butterfly      UFBOOT1000  OMP_104  n= 58  median=100.0  ≥95= 58  <70=  0
+  Green_plants   UFBOOT1000  OMP_104  n=357  median=100.0  ≥95=322  <70=  9
+  InsectsB       BOOT100     OMP_104  n= 45  median=100.0  ≥95= 34  <70=  7
+  InsectsB       UFBOOT1000  OMP_104  n= 45  median=100.0  ≥95= 45  <70=  0
+  Lassa_Virus    BOOT100     OMP_104  n=176  median= 96.0  ≥95= 93  <70= 47
+  Lassa_Virus    BOOT100     OMP_48   n=176  median= 96.0  ≥95= 92  <70= 48
+  Lassa_Virus    UFBOOT1000  OMP_104  n=175  median=100.0  ≥95=133  <70= 16
+  Lassa_Virus    UFBOOT1000  OMP_48   n=175  median=100.0  ≥95=142  <70= 17
+  Mammal         BOOT100     OMP_104  n= 34  median=100.0  ≥95= 32  <70=  0
+  Mammal         UFBOOT1000  OMP_104  n= 34  median=100.0  ≥95= 32  <70=  0
+  Mammal_B       BOOT100     OMP_104  n=271  median=100.0  ≥95=164  <70= 60
+  Mammal_B       UFBOOT1000  OMP_104  n=271  median=100.0  ≥95=228  <70= 12
+  Plants         BOOT100     OMP_104  n= 13  median=100.0  ≥95= 13  <70=  0
+  Plants         UFBOOT1000  OMP_104  n= 13  median=100.0  ≥95= 13  <70=  0
+  Plants         UFBOOT1000  OMP_48   n= 13  median=100.0  ≥95= 13  <70=  0
+  Yeast_nc       BOOT100     OMP_104  n= 20  median=100.0  ≥95= 20  <70=  0
+  Yeast_nc       UFBOOT1000  OMP_104  n= 20  median=100.0  ≥95= 20  <70=  0
+
+Figures written:
+  fig_ml_logL_compare.png
+  fig_status_grid.png
+  fig_support_distribution.png
+  fig_wall_ufboot_vs_boot.png

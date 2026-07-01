@@ -24,11 +24,10 @@ df = pd.read_csv(OUT / "runs.csv")
 HW_ORDER = ["cpu_OMP_48", "cpu_OMP_104",
             "cudajolt_V100", "cudajolt_H200",
             "openACC_stable_V100",
-            "openACC_stable_H200",
-            "openACC_JOLT_h2tiling_H200"]
+            "openACC_stable_H200"]
 HW_LABEL = {
-    "cpu_OMP_48":                       "CLX 48T",
-    "cpu_OMP_104":                      "SPR 104T",
+    "cpu_OMP_48":                       "CPU 2nd Gen Xeon",
+    "cpu_OMP_104":                      "CPU 4th Gen Xeon",
     "cudajolt_V100":                    "cudajolt V100",
     "cudajolt_H200":                    "cudajolt H200",
     "openACC_stable_V100":              "ACC V100",
@@ -41,8 +40,8 @@ HW_LABEL = {
 HW_COLOR = {
     "cpu_OMP_48":                       "#1f77b4",
     "cpu_OMP_104":                      "#e6611c",
-    "cudajolt_V100":                    "#9ecae1",
-    "cudajolt_H200":                    "#3182bd",
+    "cudajolt_V100":                    "#c7a3d9",   # light purple — distinct from CPU-blue
+    "cudajolt_H200":                    "#54278f",   # deep purple
     "openACC_stable_V100":              "#a8d8a0",
     "openACC_stable_V100_nt12":         "#7fc97f",
     "openACC_stable_H200":              "#74c476",
@@ -72,10 +71,14 @@ def _fmt_wh(j):
     if wh >= 10:   return f"{wh:.0f}Wh"
     return f"{wh:.1f}Wh"
 
+MIN_SITES = 100_000  # skip 1K / 10K panels — these were empty for ModelFinder etc.
+
 def _cells():
     cells = []
     for dt in ("AA", "DNA"):
         for s in sorted(ok[ok.datatype == dt]["sites"].dropna().unique()):
+            if s < MIN_SITES:
+                continue
             if (ok[(ok.datatype == dt) & (ok.sites == s)]).empty:
                 continue
             cells.append((dt, int(s)))
@@ -126,7 +129,8 @@ def linear_panels(value_col: str, stage_label: str, fname: str):
     fig.suptitle(f"{stage_label} (min) — per-cell linear scales",
                  fontsize=12, fontweight="bold")
     footnote = ("Each panel has its own linear y-axis scale.  "
-                "CLX = Intel Cascade Lake (OMP48), SPR = Sapphire Rapids (OMP104).  "
+                "CPU 2nd Gen Xeon = Intel Cascade Lake Xeon 8274 (48 threads).  "
+                "CPU 4th Gen Xeon = Intel Sapphire Rapids Xeon 8480+ (104 threads).  "
                 "cudajolt = IQTREE_GPU_SHARED build (no per-stage energy reporting).  "
                 "ACC = openACC_stable build; ACC JOLT = openACC_bfgs_JOLT_h2tiling build.  "
                 "'nt12' = host `-nt 12` thread pin.  Missing bar = run not COMPLETE.")
